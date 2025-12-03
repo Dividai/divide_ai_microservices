@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  despesas-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: divide-despesas-service
+    ports:
+      - "8083:8083"
+    environment:
+      SERVER_PORT: 8083
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}

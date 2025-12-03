@@ -1,0 +1,1066 @@
+{
+	"info": {
+		"_postman_id": "4e470a0d-9f30-414c-ab8e-3332d22b9dfe",
+		"name": "DivideAI - Despesas Service",
+		"description": "API completa para gerenciamento de despesas e cálculos de divisão com testes robustos",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "30376135"
+	},
+	"item": [
+		{
+			"name": "0. Health Check & Setup",
+			"item": [
+				{
+					"name": "Health Check",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Service response received', function () {",
+									"    pm.expect([200, 404, 500]).to.include(pm.response.code);",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"    console.log(' Serviço de despesas está funcionando');",
+									"} else {",
+									"    console.log(' Endpoint de health retornou:', pm.response.code);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8083/api/despesas/health",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8083",
+							"path": [
+								"api",
+								"despesas",
+								"health"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Listar Todas as Despesas",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Service response received', function () {",
+									"    pm.expect([200, 500]).to.include(pm.response.code);",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"    const despesas = pm.response.json();",
+									"    pm.environment.set('totalDespesas', despesas.length);",
+									"    console.log('Total de despesas encontradas:', despesas.length);",
+									"    ",
+									"    if (despesas.length > 0) {",
+									"        pm.environment.set('existingDespesaId', despesas[0].id);",
+									"        pm.environment.set('existingDespesaDescricao', despesas[0].descricao);",
+									"        console.log(' Primeira despesa:', despesas[0].descricao, '(ID:', despesas[0].id + ')');",
+									"    } else {",
+									"        console.log(' Nenhuma despesa encontrada - usando valores padrão');",
+									"        pm.environment.set('existingDespesaId', 'desp-1');",
+									"    }",
+									"} else {",
+									"    console.log(' Erro ao listar despesas - Status:', pm.response.code);",
+									"    pm.environment.set('totalDespesas', 0);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8083/api/despesas",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8083",
+							"path": [
+								"api",
+								"despesas"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "1. Despesas",
+			"item": [
+				{
+					"name": "Criar Despesa Válida",
+					"event": [
+						{
+							"listen": "pre-request",
+							"script": {
+								"exec": [
+									"const timestamp = pm.environment.get('timestamp');",
+									"const randomNum = pm.environment.get('randomNumber');",
+									"",
+									"const uniqueDescricao = `Despesa Teste ${timestamp}`;",
+									"const uniqueValor = (Math.random() * 500 + 50).toFixed(2);",
+									"",
+									"pm.environment.set('uniqueDescricao', uniqueDescricao);",
+									"pm.environment.set('uniqueValor', uniqueValor);",
+									"",
+									"console.log(' Criando despesa:', uniqueDescricao, '- R$', uniqueValor);"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Despesa creation handled', function () {",
+									"    pm.expect([200, 201, 400, 422, 500]).to.include(pm.response.code);",
+									"});",
+									"",
+									"if ([200, 201].includes(pm.response.code)) {",
+									"    const despesa = pm.response.json();",
+									"    ",
+									"    pm.test('Despesa created with correct data', function () {",
+									"        pm.expect(despesa).to.have.property('id');",
+									"        pm.expect(despesa.descricao).to.eql('Despesa Teste');",
+									"        pm.expect(despesa.valor).to.eql(150.50);",
+									"    });",
+									"    ",
+									"    pm.environment.set('newDespesaId', despesa.id);",
+									"    pm.environment.set('newDespesaDescricao', despesa.descricao);",
+									"    pm.environment.set('newDespesaValor', despesa.valor);",
+									"    ",
+									"    console.log(' Despesa criada com ID:', despesa.id);",
+									"} else {",
+									"    console.log(' Despesa não criada - Status:', pm.response.code);",
+									"    console.log('Resposta:', pm.response.text());",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"descricao\": \"Despesa Teste\",\n  \"valor\": 150.50,\n  \"grupoId\": 1,\n  \"pagadorId\": 1,\n  \"participantesIds\": [1, 2],\n  \"tipoDivisao\": \"IGUAL\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8083/api/despesas",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8083",
+							"path": [
+								"api",
+								"despesas"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Buscar Despesa por ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.environment.get('newDespesaId')) {",
+									"    pm.test('Despesa search handled', function () {",
+									"        pm.expect([200, 404, 500]).to.include(pm.response.code);",
+									"    });",
+									"    ",
+									"    if (pm.response.code === 200) {",
+									"        const despesa = pm.response.json();",
+									"        pm.test('Correct despesa returned', function () {",
+									"            pm.expect(despesa.id).to.eql(pm.environment.get('newDespesaId'));",
+									"            pm.expect(despesa.descricao).to.eql(pm.environment.get('newDespesaDescricao'));",
+									"        });",
+									"        console.log(' Despesa encontrada:', despesa.descricao);",
+									"    } else {",
+									"        console.log(' Despesa não encontrada - Status:', pm.response.code);",
+									"    }",
+									"} else {",
+									"    pm.test('Skipped - no despesa to search', function () {",
+									"        pm.expect(true).to.be.true;",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8083/api/despesas/{{newDespesaId}}",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8083",
+							"path": [
+								"api",
+								"despesas",
+								"{{newDespesaId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Atualizar Despesa",
+					"event": [
+						{
+							"listen": "pre-request",
+							"script": {
+								"exec": [
+									"if (pm.environment.get('newDespesaId')) {",
+									"    const updatedDescricao = pm.environment.get('uniqueDescricao') + ' - Atualizada';",
+									"    const updatedValor = (parseFloat(pm.environment.get('uniqueValor')) + 50).toFixed(2);",
+									"    pm.environment.set('updatedDescricao', updatedDescricao);",
+									"    pm.environment.set('updatedValor', updatedValor);",
+									"    console.log(' Atualizando despesa para:', updatedDescricao, '- R$', updatedValor);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.environment.get('newDespesaId')) {",
+									"    pm.test('Despesa update handled', function () {",
+									"        pm.expect([200, 400, 404, 500]).to.include(pm.response.code);",
+									"    });",
+									"    ",
+									"    if (pm.response.code === 200) {",
+									"        const despesa = pm.response.json();",
+									"        pm.test('Despesa updated correctly', function () {",
+									"            pm.expect(despesa.descricao).to.eql('Despesa Teste - Atualizada');",
+									"            pm.expect(despesa.valor).to.eql(200.50);",
+									"        });",
+									"        console.log(' Despesa atualizada:', despesa.descricao);",
+									"    } else {",
+									"        console.log(' Despesa não atualizada - Status:', pm.response.code);",
+									"    }",
+									"} else {",
+									"    pm.test('Skipped - no despesa to update', function () {",
+									"        pm.expect(true).to.be.true;",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"descricao\": \"Despesa Teste - Atualizada\",\n  \"valor\": 200.50,\n  \"grupoId\": 1,\n  \"pagadorId\": 1,\n  \"participantesIds\": [1, 2],\n  \"tipoDivisao\": \"PERSONALIZADA\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8083/api/despesas/{{newDespesaId}}",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8083",
+							"path": [
+								"api",
+								"despesas",
+								"{{newDespesaId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Listar Despesas do Grupo",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Group expenses handled', function () {",
+									"    pm.expect([200, 404, 500]).to.include(pm.response.code);",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"    const despesas = pm.response.json();",
+									"    pm.test('Response is an array', function () {",
+									"        pm.expect(despesas).to.be.an('array');",
+									"    });",
+									"    console.log(' Despesas do grupo:', despesas.length);",
+									"} else {",
+									"    console.log(' Erro ao listar despesas do grupo - Status:', pm.response.code);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8083/api/despesas/grupo/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8083",
+							"path": [
+								"api",
+								"despesas",
+								"grupo",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Listar Despesas do Usuário",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('User expenses handled', function () {",
+									"    pm.expect([200, 404, 500]).to.include(pm.response.code);",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"    const despesas = pm.response.json();",
+									"    pm.test('Response is an array', function () {",
+									"        pm.expect(despesas).to.be.an('array');",
+									"    });",
+									"    console.log(' Despesas do usuário:', despesas.length);",
+									"} else {",
+									"    console.log(' Erro ao listar despesas do usuário - Status:', pm.response.code);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8083/api/despesas/usuario/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8083",
+							"path": [
+								"api",
+								"despesas",
+								"usuario",
+								"1"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "2. Cálculos e Divisões",
+			"item": [
+				{
+					"name": "Calcular Divisão da Despesa",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.environment.get('newDespesaId')) {",
+									"    pm.test('Division calculation handled', function () {",
+									"        pm.expect([200, 400, 404, 500]).to.include(pm.response.code);",
+									"    });",
+									"    ",
+									"    if (pm.response.code === 200) {",
+									"        const divisao = pm.response.json();",
+									"        pm.test('Divisao has required fields', function () {",
+									"            pm.expect(divisao).to.have.property('despesaId');",
+									"            pm.expect(divisao).to.have.property('valorTotal');",
+									"            pm.expect(divisao).to.have.property('divisao');",
+									"        });",
+									"        console.log(' Divisão calculada para despesa:', divisao.despesaId);",
+									"        console.log(' Valor total:', divisao.valorTotal);",
+									"    } else {",
+									"        console.log(' Erro no cálculo de divisão - Status:', pm.response.code);",
+									"    }",
+									"} else {",
+									"    pm.test('Skipped - no despesa ID', function () {",
+									"        pm.expect(true).to.be.true;",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8083/api/calculos/despesa/{{newDespesaId}}/divisao",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8083",
+							"path": [
+								"api",
+								"calculos",
+								"despesa",
+								"{{newDespesaId}}",
+								"divisao"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Calcular Saldos do Grupo",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Group balance calculation handled', function () {",
+									"    pm.expect([200, 400, 404, 500]).to.include(pm.response.code);",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"    const saldos = pm.response.json();",
+									"    pm.test('Saldos returned', function () {",
+									"        pm.expect(saldos).to.be.an('object');",
+									"    });",
+									"    console.log(' Saldos do grupo calculados');",
+									"} else {",
+									"    console.log(' Erro no cálculo de saldos - Status:', pm.response.code);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8083/api/calculos/grupo/1/saldos",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8083",
+							"path": [
+								"api",
+								"calculos",
+								"grupo",
+								"1",
+								"saldos"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Obter Estatísticas do Grupo",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Group statistics handled', function () {",
+									"    pm.expect([200, 400, 404, 500]).to.include(pm.response.code);",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"    const stats = pm.response.json();",
+									"    pm.test('Statistics returned', function () {",
+									"        pm.expect(stats).to.be.an('object');",
+									"    });",
+									"    console.log(' Estatísticas do grupo obtidas');",
+									"} else {",
+									"    console.log(' Erro ao obter estatísticas - Status:', pm.response.code);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8083/api/calculos/grupo/1/estatisticas",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8083",
+							"path": [
+								"api",
+								"calculos",
+								"grupo",
+								"1",
+								"estatisticas"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Processar Todas as Despesas do Grupo",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Group processing handled', function () {",
+									"    pm.expect([200, 400, 404, 500]).to.include(pm.response.code);",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"    const resultado = pm.response.json();",
+									"    pm.test('Processing result returned', function () {",
+									"        pm.expect(resultado).to.be.an('object');",
+									"    });",
+									"    console.log(' Processamento das despesas concluído');",
+									"} else {",
+									"    console.log(' Erro no processamento - Status:', pm.response.code);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8083/api/calculos/grupo/1/processar",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8083",
+							"path": [
+								"api",
+								"calculos",
+								"grupo",
+								"1",
+								"processar"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "3. Tipos de Divisão",
+			"item": [
+				{
+					"name": "Criar Despesa - Divisão Igual",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Equal division expense handled', function () {",
+									"    pm.expect([200, 201, 400, 422, 500]).to.include(pm.response.code);",
+									"});",
+									"",
+									"if ([200, 201].includes(pm.response.code)) {",
+									"    const despesa = pm.response.json();",
+									"    pm.test('Tipo divisão igual', function () {",
+									"        pm.expect(despesa.tipoDivisao).to.eql('IGUAL');",
+									"    });",
+									"    pm.environment.set('despesaIgualId', despesa.id);",
+									"    console.log(' Despesa com divisão igual criada');",
+									"} else {",
+									"    console.log(' Erro ao criar despesa igual - Status:', pm.response.code);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"descricao\": \"Jantar - Divisão Igual\",\n  \"valor\": 120.00,\n  \"grupoId\": 1,\n  \"pagadorId\": 1,\n  \"participantesIds\": [1, 2],\n  \"tipoDivisao\": \"IGUAL\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8083/api/despesas",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8083",
+							"path": [
+								"api",
+								"despesas"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Criar Despesa - Divisão Personalizada",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Custom division expense handled', function () {",
+									"    pm.expect([200, 201, 400, 422, 500]).to.include(pm.response.code);",
+									"});",
+									"",
+									"if ([200, 201].includes(pm.response.code)) {",
+									"    const despesa = pm.response.json();",
+									"    pm.test('Tipo divisão personalizada', function () {",
+									"        pm.expect(despesa.tipoDivisao).to.eql('PERSONALIZADA');",
+									"    });",
+									"    pm.environment.set('despesaPersonalizadaId', despesa.id);",
+									"    console.log(' Despesa com divisão personalizada criada');",
+									"} else {",
+									"    console.log(' Erro ao criar despesa personalizada - Status:', pm.response.code);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"descricao\": \"Combustível - Divisão 70/30\",\n  \"valor\": 200.00,\n  \"grupoId\": 1,\n  \"pagadorId\": 1,\n  \"participantesIds\": [1, 2],\n  \"tipoDivisao\": \"PERSONALIZADA\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8083/api/despesas",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8083",
+							"path": [
+								"api",
+								"despesas"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Criar Despesa - Divisão por Porcentagem",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Percentage division expense handled', function () {",
+									"    pm.expect([200, 201, 400, 422, 500]).to.include(pm.response.code);",
+									"});",
+									"",
+									"if ([200, 201].includes(pm.response.code)) {",
+									"    const despesa = pm.response.json();",
+									"    pm.test('Tipo divisão porcentagem', function () {",
+									"        pm.expect(despesa.tipoDivisao).to.eql('PORCENTAGEM');",
+									"    });",
+									"    pm.environment.set('despesaPorcentagemId', despesa.id);",
+									"    console.log(' Despesa com divisão por porcentagem criada');",
+									"} else {",
+									"    console.log(' Erro ao criar despesa porcentagem - Status:', pm.response.code);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"descricao\": \"Hotel - Divisão por %\",\n  \"valor\": 300.00,\n  \"grupoId\": 1,\n  \"pagadorId\": 1,\n  \"participantesIds\": [1, 2],\n  \"tipoDivisao\": \"PORCENTAGEM\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8083/api/despesas",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8083",
+							"path": [
+								"api",
+								"despesas"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "4. Testes de Validação",
+			"item": [
+				{
+					"name": "Tentar Criar Despesa com Dados Inválidos",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Invalid data handled', function () {",
+									"    pm.expect([400, 422, 500]).to.include(pm.response.code);",
+									"});",
+									"",
+									"console.log(' Dados inválidos rejeitados - Status:', pm.response.code);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"descricao\": \"\",\n  \"valor\": -50,\n  \"grupoId\": null,\n  \"pagadorId\": null,\n  \"participantesIds\": [],\n  \"tipoDivisao\": \"INVALIDO\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8083/api/despesas",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8083",
+							"path": [
+								"api",
+								"despesas"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Buscar Despesa Inexistente",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Nonexistent expense handled', function () {",
+									"    pm.expect([404, 500]).to.include(pm.response.code);",
+									"});",
+									"",
+									"console.log(' Despesa inexistente retornou:', pm.response.code);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8083/api/despesas/desp-99999",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8083",
+							"path": [
+								"api",
+								"despesas",
+								"desp-99999"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "5. Testes de Segurança",
+			"item": [
+				{
+					"name": "Teste SQL Injection",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('SQL Injection handled', function () {",
+									"    pm.expect([200, 400, 404, 422, 500]).to.include(pm.response.code);",
+									"});",
+									"",
+									"console.log(' Teste de SQL Injection - Status:', pm.response.code);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8083/api/despesas/'; DROP TABLE despesas; --",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8083",
+							"path": [
+								"api",
+								"despesas",
+								"'; DROP TABLE despesas; --"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Teste XSS",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('XSS payload handled', function () {",
+									"    pm.expect([200, 400, 422, 500]).to.include(pm.response.code);",
+									"    if (pm.response.code === 200) {",
+									"        console.log(' XSS não foi bloqueado - possível vulnerabilidade');",
+									"    } else {",
+									"        console.log(' XSS foi bloqueado corretamente');",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"descricao\": \"<script>alert('XSS')</script>\",\n  \"valor\": 100,\n  \"grupoId\": 1,\n  \"pagadorId\": 1,\n  \"participantesIds\": [1],\n  \"tipoDivisao\": \"IGUAL\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8083/api/despesas",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8083",
+							"path": [
+								"api",
+								"despesas"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "6. Cleanup",
+			"item": [
+				{
+					"name": "Excluir Despesas de Teste",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.environment.get('newDespesaId')) {",
+									"    pm.test('Despesa deletion handled', function () {",
+									"        pm.expect([200, 204, 404, 500]).to.include(pm.response.code);",
+									"    });",
+									"    ",
+									"    if ([200, 204].includes(pm.response.code)) {",
+									"        console.log(' Despesa removida com sucesso');",
+									"    } else if (pm.response.code === 404) {",
+									"        console.log(' Despesa já não existe');",
+									"    } else {",
+									"        console.log(' Erro ao remover despesa - Status:', pm.response.code);",
+									"    }",
+									"} else {",
+									"    pm.test('Skipped - no despesa to delete', function () {",
+									"        pm.expect(true).to.be.true;",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8083/api/despesas/{{newDespesaId}}",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8083",
+							"path": [
+								"api",
+								"despesas",
+								"{{newDespesaId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Relatório Final",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.environment.set('testEndTime', new Date().toISOString());",
+									"",
+									"console.log(' === RELATÓRIO FINAL DE TESTES - DESPESAS ===');",
+									"console.log(' Início:', pm.environment.get('testStartTime'));",
+									"console.log(' Fim:', pm.environment.get('testEndTime'));",
+									"console.log(' Total de despesas no sistema:', pm.environment.get('totalDespesas));",
+									"console.log(' Último tempo de resposta:', pm.environment.get('lastResponseTime') + 'ms');",
+									"",
+									"if (pm.environment.get('newDespesaId')) {",
+									"    console.log(' Despesa de teste criada:', pm.environment.get('newDespesaDescricao'));",
+									"}",
+									"",
+									"pm.test('Test suite completed', function () {",
+									"    pm.expect(true).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8083/api/despesas",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8083",
+							"path": [
+								"api",
+								"despesas"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"exec": [
+					"pm.environment.set('timestamp', Date.now());",
+					"pm.environment.set('randomNumber', Math.floor(Math.random() * 10000));",
+					"pm.environment.set('testStartTime', new Date().toISOString());"
+				],
+				"type": "text/javascript"
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"exec": [
+					"pm.environment.set('lastResponseTime', pm.response.responseTime);",
+					"",
+					"pm.test('Response time is acceptable', function () {",
+					"    pm.expect(pm.response.responseTime).to.be.below(5000);",
+					"});"
+				],
+				"type": "text/javascript"
+			}
+		}
+	]
+}

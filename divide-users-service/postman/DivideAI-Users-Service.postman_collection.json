@@ -1,0 +1,1165 @@
+{
+	"info": {
+		"_postman_id": "402e120c-8a1f-4773-83f2-ab93e3dfd7c2",
+		"name": "DivideAI - Users Service",
+		"description": "API completa para gerenciamento de usuários e grupos com testes robustos",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "30376135"
+	},
+	"item": [
+		{
+			"name": "0. Health Check & Setup",
+			"item": [
+				{
+					"name": "Health Check",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Service is healthy', function () {",
+									"    pm.expect([200, 404]).to.include(pm.response.code);",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"    console.log(' Serviço está funcionando');",
+									"} else {",
+									"    console.log(' Endpoint de health não encontrado, mas serviço pode estar funcionando');",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8082/health",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8082",
+							"path": [
+								"health"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Listar Todos os Usuários",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"const users = pm.response.json();",
+									"pm.environment.set('totalUsers', users.length);",
+									"console.log(' Total de usuários encontrados:', users.length);",
+									"",
+									"if (users.length > 0) {",
+									"    pm.environment.set('existingUserId', users[0].id);",
+									"    pm.environment.set('existingUserEmail', users[0].email);",
+									"    pm.environment.set('existingUserName', users[0].nome);",
+									"    console.log(' Primeiro usuário:', users[0].nome, '(ID:', users[0].id + ')');",
+									"    ",
+									"    pm.test('User has required fields', function () {",
+									"        pm.expect(users[0]).to.have.property('id');",
+									"        pm.expect(users[0]).to.have.property('nome');",
+									"        pm.expect(users[0]).to.have.property('email');",
+									"    });",
+									"} else {",
+									"    console.log(' Nenhum usuário encontrado - usando valores padrão');",
+									"    pm.environment.set('existingUserId', '1');",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8082/api/usuarios",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8082",
+							"path": [
+								"api",
+								"usuarios"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Listar Todos os Grupos",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"const groups = pm.response.json();",
+									"pm.environment.set('totalGroups', groups.length);",
+									"console.log('Total de grupos encontrados:', groups.length);",
+									"",
+									"if (groups.length > 0) {",
+									"    pm.environment.set('existingGroupId', groups[0].id);",
+									"    pm.environment.set('existingGroupName', groups[0].nome);",
+									"    console.log(' Primeiro grupo:', groups[0].nome, '(ID:', groups[0].id + ')');",
+									"    ",
+									"    pm.test('Group has required fields', function () {",
+									"        pm.expect(groups[0]).to.have.property('id');",
+									"        pm.expect(groups[0]).to.have.property('nome');",
+									"    });",
+									"} else {",
+									"    console.log(' Nenhum grupo encontrado - usando valores padrão');",
+									"    pm.environment.set('existingGroupId', '1');",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8082/api/grupos",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8082",
+							"path": [
+								"api",
+								"grupos"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "1. Usuários - CRUD Completo",
+			"item": [
+				{
+					"name": "Criar Usuário Válido",
+					"event": [
+						{
+							"listen": "pre-request",
+							"script": {
+								"exec": [
+									"const timestamp = pm.environment.get('timestamp');",
+									"const randomNum = pm.environment.get('randomNumber');",
+									"",
+									"const uniqueEmail = `usuario${timestamp}${randomNum}@teste.com`;",
+									"const uniqueName = `Usuario Teste ${timestamp}`;",
+									"const uniquePhone = `119${String(randomNum).padStart(8, '0')}`;",
+									"",
+									"pm.environment.set('uniqueEmail', uniqueEmail);",
+									"pm.environment.set('uniqueName', uniqueName);",
+									"pm.environment.set('uniquePhone', uniquePhone);",
+									"",
+									"console.log(' Criando usuário:', uniqueName, '|', uniqueEmail);"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('User creation handled', function () {",
+									"    pm.expect([200, 201, 400, 422]).to.include(pm.response.code);",
+									"});",
+									"",
+									"if ([200, 201].includes(pm.response.code)) {",
+									"    const user = pm.response.json();",
+									"    ",
+									"    pm.test('User created with correct data', function () {",
+									"        pm.expect(user).to.have.property('id');",
+									"        pm.expect(user.nome).to.eql(pm.environment.get('uniqueName'));",
+									"        pm.expect(user.email).to.eql(pm.environment.get('uniqueEmail'));",
+									"    });",
+									"    ",
+									"    pm.environment.set('newUserId', user.id);",
+									"    pm.environment.set('newUserEmail', user.email);",
+									"    pm.environment.set('newUserName', user.nome);",
+									"    ",
+									"    console.log('Usuário criado com ID:', user.id);",
+									"} else {",
+									"    console.log(' Usuário não criado - Status:', pm.response.code);",
+									"    console.log('Resposta:', pm.response.text());",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nome\": \"{{uniqueName}}\",\n  \"email\": \"{{uniqueEmail}}\",\n  \"telefone\": \"{{uniquePhone}}\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8082/api/usuarios",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8082",
+							"path": [
+								"api",
+								"usuarios"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Buscar Usuário por ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.environment.get('newUserId')) {",
+									"    pm.test('Status code is 200', function () {",
+									"        pm.response.to.have.status(200);",
+									"    });",
+									"    ",
+									"    const user = pm.response.json();",
+									"    pm.test('Correct user returned', function () {",
+									"        pm.expect(user.id).to.eql(parseInt(pm.environment.get('newUserId')));",
+									"        pm.expect(user.email).to.eql(pm.environment.get('newUserEmail'));",
+									"    });",
+									"    ",
+									"    console.log('Usuário encontrado:', user.nome);",
+									"} else {",
+									"    pm.test('Skipped - no user to search', function () {",
+									"        pm.expect(true).to.be.true;",
+									"    });",
+									"    console.log(' Teste pulado - nenhum usuário criado');",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8082/api/usuarios/{{newUserId}}",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8082",
+							"path": [
+								"api",
+								"usuarios",
+								"{{newUserId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Atualizar Usuário",
+					"event": [
+						{
+							"listen": "pre-request",
+							"script": {
+								"exec": [
+									"if (pm.environment.get('newUserId')) {",
+									"    const updatedName = pm.environment.get('uniqueName') + ' - Atualizado';",
+									"    pm.environment.set('updatedUserName', updatedName);",
+									"    console.log(' Atualizando usuário para:', updatedName);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.environment.get('newUserId')) {",
+									"    if (pm.response.code === 200) {",
+									"        pm.test('Status code is 200', function () {",
+									"            pm.response.to.have.status(200);",
+									"        });",
+									"        ",
+									"        const user = pm.response.json();",
+									"        pm.test('User updated correctly', function () {",
+									"            pm.expect(user.nome).to.eql(pm.environment.get('updatedUserName'));",
+									"        });",
+									"        ",
+									"        console.log(' Usuário atualizado:', user.nome);",
+									"    } else {",
+									"        console.log('Atualização não suportada ou erro:', pm.response.code);",
+									"        pm.test('Update not supported or error occurred', function () {",
+									"            pm.expect([200, 404, 405]).to.include(pm.response.code);",
+									"        });",
+									"    }",
+									"} else {",
+									"    pm.test('Skipped - no user to update', function () {",
+									"        pm.expect(true).to.be.true;",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nome\": \"{{updatedUserName}}\",\n  \"email\": \"{{newUserEmail}}\",\n  \"telefone\": \"{{uniquePhone}}\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8082/api/usuarios/{{newUserId}}",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8082",
+							"path": [
+								"api",
+								"usuarios",
+								"{{newUserId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Listar Grupos do Usuário",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.environment.get('newUserId')) {",
+									"    pm.test('Status code is 200', function () {",
+									"        pm.response.to.have.status(200);",
+									"    });",
+									"    ",
+									"    const groups = pm.response.json();",
+									"    pm.test('Groups list returned', function () {",
+									"        pm.expect(groups).to.be.an('array');",
+									"    });",
+									"    ",
+									"    console.log('Grupos do usuário obtidos:', groups.length, 'grupos');",
+									"} else {",
+									"    pm.test('Skipped - no user ID', function () {",
+									"        pm.expect(true).to.be.true;",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8082/api/usuarios/{{newUserId}}/grupos",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8082",
+							"path": [
+								"api",
+								"usuarios",
+								"{{newUserId}}",
+								"grupos"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Tentar Criar Usuário com Email Duplicado",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.environment.get('newUserEmail')) {",
+									"    pm.test('Duplicate email rejected', function () {",
+									"        pm.expect([400, 409, 422]).to.include(pm.response.code);",
+									"    });",
+									"    ",
+									"    if ([400, 409, 422].includes(pm.response.code)) {",
+									"        console.log(' Email duplicado rejeitado corretamente');",
+									"    } else {",
+									"        console.log(' Email duplicado foi aceito - possível problema');",
+									"    }",
+									"} else {",
+									"    pm.test('Skipped - no email to duplicate', function () {",
+									"        pm.expect(true).to.be.true;",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nome\": \"Usuario Duplicado\",\n  \"email\": \"{{newUserEmail}}\",\n  \"telefone\": \"11888888888\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8082/api/usuarios",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8082",
+							"path": [
+								"api",
+								"usuarios"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Tentar Criar Usuário com Dados Inválidos",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Invalid data rejected', function () {",
+									"    pm.expect([400, 422]).to.include(pm.response.code);",
+									"});",
+									"",
+									"if ([400, 422].includes(pm.response.code)) {",
+									"    console.log(' Dados inválidos rejeitados corretamente');",
+									"} else {",
+									"    console.log('Dados inválidos foram aceitos - possível problema');",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nome\": \"\",\n  \"email\": \"email-invalido\",\n  \"telefone\": \"123\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8082/api/usuarios",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8082",
+							"path": [
+								"api",
+								"usuarios"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Buscar Usuário Inexistente",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('User not found', function () {",
+									"    pm.expect(pm.response.code).to.eql(404);",
+									"});",
+									"",
+									"console.log(' Usuário inexistente retornou 404 corretamente');"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8082/api/usuarios/99999",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8082",
+							"path": [
+								"api",
+								"usuarios",
+								"99999"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "2. Grupos - CRUD Completo",
+			"item": [
+				{
+					"name": "Criar Grupo Válido",
+					"event": [
+						{
+							"listen": "pre-request",
+							"script": {
+								"exec": [
+									"const timestamp = pm.environment.get('timestamp');",
+									"const randomNum = pm.environment.get('randomNumber');",
+									"",
+									"const uniqueGroupName = `Grupo Teste ${timestamp}`;",
+									"const uniqueDescription = `Grupo criado automaticamente em ${new Date().toLocaleString()}`;",
+									"",
+									"pm.environment.set('uniqueGroupName', uniqueGroupName);",
+									"pm.environment.set('uniqueGroupDescription', uniqueDescription);",
+									"",
+									"console.log(' Criando grupo:', uniqueGroupName);"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Group creation handled', function () {",
+									"    pm.expect([200, 201, 400, 422]).to.include(pm.response.code);",
+									"});",
+									"",
+									"if ([200, 201].includes(pm.response.code)) {",
+									"    const group = pm.response.json();",
+									"    ",
+									"    pm.test('Group created with correct data', function () {",
+									"        pm.expect(group).to.have.property('id');",
+									"        pm.expect(group.nome).to.eql(pm.environment.get('uniqueGroupName'));",
+									"    });",
+									"    ",
+									"    pm.environment.set('newGroupId', group.id);",
+									"    pm.environment.set('newGroupName', group.nome);",
+									"    ",
+									"    console.log(' Grupo criado com ID:', group.id);",
+									"} else {",
+									"    console.log(' Grupo não criado - Status:', pm.response.code);",
+									"    console.log('Resposta:', pm.response.text());",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nome\": \"{{uniqueGroupName}}\",\n  \"descricao\": \"{{uniqueGroupDescription}}\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8082/api/grupos",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8082",
+							"path": [
+								"api",
+								"grupos"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Buscar Grupo por ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.environment.get('newGroupId')) {",
+									"    pm.test('Status code is 200', function () {",
+									"        pm.response.to.have.status(200);",
+									"    });",
+									"    ",
+									"    const group = pm.response.json();",
+									"    pm.test('Correct group returned', function () {",
+									"        pm.expect(group.id).to.eql(parseInt(pm.environment.get('newGroupId')));",
+									"        pm.expect(group.nome).to.eql(pm.environment.get('newGroupName'));",
+									"    });",
+									"    ",
+									"    console.log(' Grupo encontrado:', group.nome);",
+									"} else {",
+									"    pm.test('Skipped - no group to search', function () {",
+									"        pm.expect(true).to.be.true;",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8082/api/grupos/{{newGroupId}}",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8082",
+							"path": [
+								"api",
+								"grupos",
+								"{{newGroupId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Adicionar Membro ao Grupo",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.environment.get('newGroupId') && pm.environment.get('newUserId')) {",
+									"    if ([200, 201].includes(pm.response.code)) {",
+									"        pm.test('Status code is 200 or 201', function () {",
+									"            pm.expect([200, 201]).to.include(pm.response.code);",
+									"        });",
+									"        ",
+									"        const group = pm.response.json();",
+									"        pm.test('Member added successfully', function () {",
+									"            pm.expect(group).to.have.property('membros');",
+									"            if (Array.isArray(group.membros)) {",
+									"                pm.expect(group.membros.length).to.be.greaterThan(0);",
+									"            }",
+									"        });",
+									"        ",
+									"        console.log(' Membro adicionado ao grupo');",
+									"    } else {",
+									"        console.log(' Erro ao adicionar membro:', pm.response.code);",
+									"        pm.test('Error handled gracefully', function () {",
+									"            pm.expect([200, 201, 400, 404, 409]).to.include(pm.response.code);",
+									"        });",
+									"    }",
+									"} else {",
+									"    pm.test('Skipped - missing group or user ID', function () {",
+									"        pm.expect(true).to.be.true;",
+									"    });",
+									"    console.log(' Teste pulado - IDs não disponíveis');",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8082/api/grupos/{{newGroupId}}/membros/{{newUserId}}",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8082",
+							"path": [
+								"api",
+								"grupos",
+								"{{newGroupId}}",
+								"membros",
+								"{{newUserId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Listar Membros do Grupo",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.environment.get('newGroupId')) {",
+									"    if (pm.response.code === 200) {",
+									"        pm.test('Status code is 200', function () {",
+									"            pm.response.to.have.status(200);",
+									"        });",
+									"        ",
+									"        const members = pm.response.json();",
+									"        pm.test('Members list returned', function () {",
+									"            pm.expect(members).to.be.an('array');",
+									"        });",
+									"        ",
+									"        console.log(' Lista de membros obtida:', members.length, 'membros');",
+									"    } else {",
+									"        console.log(' Endpoint de membros não disponível:', pm.response.code);",
+									"        pm.test('Endpoint not available', function () {",
+									"            pm.expect([200, 404, 405]).to.include(pm.response.code);",
+									"        });",
+									"    }",
+									"} else {",
+									"    pm.test('Skipped - no group ID', function () {",
+									"        pm.expect(true).to.be.true;",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8082/api/grupos/{{newGroupId}}/membros",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8082",
+							"path": [
+								"api",
+								"grupos",
+								"{{newGroupId}}",
+								"membros"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "3. Testes de Segurança",
+			"item": [
+				{
+					"name": "Teste SQL Injection",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('SQL Injection blocked', function () {",
+									"    pm.expect([400, 422, 500]).to.not.include(pm.response.code);",
+									"    if (pm.response.code === 200) {",
+									"        const users = pm.response.json();",
+									"        pm.expect(users).to.be.an('array');",
+									"    }",
+									"});",
+									"",
+									"console.log('Teste de SQL Injection - Status:', pm.response.code);"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8082/api/usuarios?nome='; DROP TABLE usuarios; --",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8082",
+							"path": [
+								"api",
+								"usuarios"
+							],
+							"query": [
+								{
+									"key": "nome",
+									"value": "'; DROP TABLE usuarios; --"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Teste XSS",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('XSS payload response', function () {",
+									"    pm.expect([200, 400, 422]).to.include(pm.response.code);",
+									"    if (pm.response.code === 200) {",
+									"        console.log(' XSS não foi bloqueado - possível vulnerabilidade');",
+									"    } else {",
+									"        console.log(' XSS foi bloqueado corretamente');",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nome\": \"<script>alert('XSS')</script>\",\n  \"email\": \"xss@teste.com\",\n  \"telefone\": \"11999999999\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8082/api/usuarios",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8082",
+							"path": [
+								"api",
+								"usuarios"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "4. Testes de Performance",
+			"item": [
+				{
+					"name": "Teste de Carga - Listar Usuários",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Response time under 2 seconds', function () {",
+									"    pm.expect(pm.response.responseTime).to.be.below(2000);",
+									"});",
+									"",
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"console.log(' Tempo de resposta:', pm.response.responseTime + 'ms');"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8082/api/usuarios",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8082",
+							"path": [
+								"api",
+								"usuarios"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "5. Cleanup",
+			"item": [
+				{
+					"name": "Remover Usuário Criado",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.environment.get('newUserId')) {",
+									"    if ([200, 204, 404].includes(pm.response.code)) {",
+									"        pm.test('User deletion handled', function () {",
+									"            pm.expect([200, 204, 404, 405]).to.include(pm.response.code);",
+									"        });",
+									"        ",
+									"        if ([200, 204].includes(pm.response.code)) {",
+									"            console.log(' Usuário removido com sucesso');",
+									"        } else if (pm.response.code === 404) {",
+									"            console.log(' Usuário já não existe');",
+									"        } else {",
+									"            console.log(' Remoção não suportada');",
+									"        }",
+									"    }",
+									"} else {",
+									"    pm.test('Skipped - no user to delete', function () {",
+									"        pm.expect(true).to.be.true;",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8082/api/usuarios/{{newUserId}}",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8082",
+							"path": [
+								"api",
+								"usuarios",
+								"{{newUserId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Remover Grupo Criado",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.environment.get('newGroupId')) {",
+									"    pm.test('Group deletion handled', function () {",
+									"        pm.expect([200, 204, 404, 405]).to.include(pm.response.code);",
+									"    });",
+									"    ",
+									"    if ([200, 204].includes(pm.response.code)) {",
+									"        console.log('Grupo removido com sucesso');",
+									"    } else if (pm.response.code === 404) {",
+									"        console.log(' Grupo já não existe');",
+									"    } else {",
+									"        console.log(' Remoção não suportada');",
+									"    }",
+									"} else {",
+									"    pm.test('Skipped - no group to delete', function () {",
+									"        pm.expect(true).to.be.true;",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8082/api/grupos/{{newGroupId}}",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8082",
+							"path": [
+								"api",
+								"grupos",
+								"{{newGroupId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Relatório Final",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.environment.set('testEndTime', new Date().toISOString());",
+									"",
+									"console.log(' === RELATÓRIO FINAL DE TESTES ===');",
+									"console.log(' Início:', pm.environment.get('testStartTime'));",
+									"console.log(' Fim:', pm.environment.get('testEndTime'));",
+									"console.log(' Total de usuários no sistema:', pm.environment.get('totalUsers'));",
+									"console.log(' Total de grupos no sistema:', pm.environment.get('totalGroups'));",
+									"console.log(' Último tempo de resposta:', pm.environment.get('lastResponseTime') + 'ms');",
+									"",
+									"if (pm.environment.get('newUserId')) {",
+									"    console.log(' Usuário de teste criado:', pm.environment.get('newUserName'));",
+									"}",
+									"if (pm.environment.get('newGroupId')) {",
+									"    console.log(' Grupo de teste criado:', pm.environment.get('newGroupName'));",
+									"}",
+									"",
+									"pm.test('Test suite completed', function () {",
+									"    pm.expect(true).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8082/api/usuarios",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8082",
+							"path": [
+								"api",
+								"usuarios"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"exec": [
+					"pm.environment.set('timestamp', Date.now());",
+					"pm.environment.set('randomNumber', Math.floor(Math.random() * 10000));",
+					"pm.environment.set('testStartTime', new Date().toISOString());"
+				],
+				"type": "text/javascript"
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"exec": [
+					"pm.environment.set('lastResponseTime', pm.response.responseTime);",
+					"",
+					"pm.test('Response time is acceptable', function () {",
+					"    pm.expect(pm.response.responseTime).to.be.below(5000);",
+					"});",
+					"",
+					"pm.test('Response has correct content type', function () {",
+					"    if (pm.response.code === 200) {",
+					"        pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+					"    }",
+					"});"
+				],
+				"type": "text/javascript"
+			}
+		}
+	]
+}

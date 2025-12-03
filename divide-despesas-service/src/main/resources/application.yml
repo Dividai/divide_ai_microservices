@@ -1,0 +1,23 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: divide-despesas-service
+
+aws:
+  accessKeyId: ${AWS_ACCESS_KEY_ID:your_access_key_here}
+  secretKey: ${AWS_SECRET_ACCESS_KEY:your_secret_key_here}
+  region: us-east-1
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+  packages-to-scan: com.divide_ai.expense
+
+logging:
+  level:
+    software.amazon.awssdk: INFO
+    com.divide_ai.expense: INFO
