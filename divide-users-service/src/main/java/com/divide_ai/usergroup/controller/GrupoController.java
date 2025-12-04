@@ -71,8 +71,12 @@ public class GrupoController {
     
     @DeleteMapping("/{id}")
     @Operation(summary = "Excluir grupo", description = "Remove um grupo do sistema")
-    public ResponseEntity<Void> excluirGrupo(@PathVariable Long id) {
-        grupoService.deleteById(id);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<?> excluirGrupo(@PathVariable Long id) {
+        try {
+            grupoService.deleteById(id);
+            return ResponseEntity.noContent().build();
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Erro ao excluir grupo: " + e.getMessage());
+        }
     }
 }

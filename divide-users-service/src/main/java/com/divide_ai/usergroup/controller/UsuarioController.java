@@ -71,8 +71,12 @@ public class UsuarioController {
     
     @DeleteMapping("/{id}")
     @Operation(summary = "Excluir usuário", description = "Remove um usuário do sistema")
-    public ResponseEntity<Void> excluirUsuario(@PathVariable Long id) {
-        usuarioService.deleteById(id);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<?> excluirUsuario(@PathVariable Long id) {
+        try {
+            usuarioService.deleteById(id);
+            return ResponseEntity.noContent().build();
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Erro ao excluir usuário: " + e.getMessage());
+        }
     }
 }

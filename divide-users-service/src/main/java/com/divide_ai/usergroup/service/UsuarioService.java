@@ -4,6 +4,7 @@ import com.divide_ai.usergroup.entity.Usuario;
 import com.divide_ai.usergroup.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Optional;
 
@@ -25,7 +26,11 @@ public class UsuarioService {
         return usuarioRepository.save(usuario);
     }
     
+    @Transactional
     public void deleteById(Long id) {
+        if (!usuarioRepository.existsById(id)) {
+            throw new RuntimeException("Usuário não encontrado com ID: " + id);
+        }
         usuarioRepository.deleteById(id);
     }
     

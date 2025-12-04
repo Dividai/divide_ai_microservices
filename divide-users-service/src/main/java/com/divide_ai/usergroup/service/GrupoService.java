@@ -6,6 +6,7 @@ import com.divide_ai.usergroup.repository.GrupoRepository;
 import com.divide_ai.usergroup.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Optional;
 
@@ -30,7 +31,11 @@ public class GrupoService {
         return grupoRepository.save(grupo);
     }
     
+    @Transactional
     public void deleteById(Long id) {
+        if (!grupoRepository.existsById(id)) {
+            throw new RuntimeException("Grupo não encontrado com ID: " + id);
+        }
         grupoRepository.deleteById(id);
     }
     

@@ -7,7 +7,7 @@ spring:
   datasource:
     url: ${DATABASE_URL:jdbc:postgresql://divideaidb.c1ioc2o6uc2v.us-east-2.rds.amazonaws.com:5432/divideaidb}
     username: ${DATABASE_USERNAME:divideai}
-    password: ${DATABASE_PASSWORD:change_me}
+    password: ${DATABASE_PASSWORD:caloteiro123}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10
